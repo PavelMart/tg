@@ -20,7 +20,7 @@ class Docx {
     });
   }
 
-  static translateDocumentXMLToJSON() {
+  static translateXMLToJSON() {
     let json;
     const xml = fs.readFileSync("./extracted/word/document.xml");
     parseString(xml, function (err, result) {
@@ -30,40 +30,165 @@ class Docx {
     return json;
   }
 
-  static translateDocumentJSONToXML(json) {
+  static translateJSONToXML(original, prepared) {
     const builder = new Builder();
 
-    const xml = builder.buildObject(json);
+    const { p } = this.getDocumentElements(original);
+
+    const wp = p.map((p, i) => {
+      if (!prepared[i].handle) return p;
+
+      let pStyle = p.hasOwnProperty("w:pPr") ? p["w:pPr"][0] : null;
+      if (pStyle && !pStyle.hasOwnProperty("w:numPr")) pStyle = { ...pStyle, ["w:ind"]: [{ $: { "w:firstLine": "708" } }] };
+
+      let rStyle = p["w:r"][0]["w:rPr"][0];
+      if (prepared[i].isAddText) rStyle = { ...rStyle, ["w:highlight"]: [{ $: { "w:val": "yellow" } }] };
+      if (rStyle.hasOwnProperty("w:b")) delete rStyle["w:b"];
+
+      let wr = [
+        {
+          "w:rPr": [rStyle],
+          "w:t": [prepared[i].text],
+        },
+      ];
+      if (prepared[i].ref) wr.push(prepared[i].ref);
+
+      const result = {
+        ...p,
+        ["w:r"]: wr,
+      };
+
+      if (pStyle) result["w:pPr"] = [pStyle];
+
+      return result;
+    });
+
+    const changedDocument = this.changeParagraphs(original, wp);
+
+    const xml = builder.buildObject(changedDocument);
 
     fs.writeFileSync("./extracted/word/document.xml", xml);
   }
 
+  static checkIsCenter(paragraph) {
+    return (
+      paragraph.hasOwnProperty("w:pPr") &&
+      paragraph["w:pPr"][0].hasOwnProperty("w:jc") &&
+      paragraph["w:pPr"][0]["w:jc"][0]["$"]["w:val"] === "center"
+    );
+  }
+
+  static checkIsPicture(rows) {
+    return rows.findIndex((r) => r.hasOwnProperty("w:drawing")) > -1;
+  }
+
+  static checkColor = (rows, color) => {
+    let isAddText = false;
+
+    for (let i = 0; i < rows.length; i++) {
+      if (
+        rows[i].hasOwnProperty("w:rPr") &&
+        rows[i]["w:rPr"][0].hasOwnProperty("w:highlight") &&
+        rows[i]["w:rPr"][0]["w:highlight"][0]["$"]["w:val"] === color
+      ) {
+        isAddText = true;
+        break;
+      }
+    }
+
+    return isAddText;
+  };
+
+  static checkIsBoldText = (row) => {
+    return row.hasOwnProperty("w:rPr") && row["w:rPr"][0].hasOwnProperty("w:b");
+  };
+
+  static getRowText = (row) => {
+    return typeof row["w:t"][0] === "string" ? row["w:t"][0] : row["w:t"][0].hasOwnProperty("_") ? row["w:t"][0]["_"] : "";
+  };
+
+  static findKeywords = (rows) => {
+    const keywords = [];
+    rows.forEach((r) => {
+      if (this.checkIsBoldText(r)) keywords.push(this.getRowText(r));
+    });
+    return keywords;
+  };
+
+  static getRef = (rows) => {
+    let ref = null;
+    rows.forEach((r) => {
+      if (r.hasOwnProperty("w:footnoteReference")) ref = r;
+    });
+    return ref;
+  };
+
   static prepareJSONForRephpasing(json) {
     const { p } = this.getDocumentElements(json);
 
-    const wp = p.map((p) => {
-      if (!p["w:r"]) return p;
-      if (!p["w:pPr"][0]["w:rPr"]) return p;
+    const result = p.map((p) => {
+      const obj = {
+        type: "empty",
+        handle: true,
+        pStyle: null,
+        isAddText: false,
+        ref: null,
+        text: "",
+        keywords: [],
+        query: "",
+      };
 
-      if (p["w:pPr"][0]["w:rPr"][0].hasOwnProperty("w:b")) {
-        return p;
-      }
+      const rows = p["w:r"];
 
-      const wt = p["w:r"]
-        .map((r) => {
-          if (r["w:t"]) return r["w:t"][0].hasOwnProperty("_") ? r["w:t"][0]["_"] : r["w:t"][0];
-        })
-        .filter((r) => typeof r === "string")
-        .join("");
+      if (!rows) return { ...obj, handle: false };
 
-      const wr = [{ ...p["w:r"][0], ["w:t"]: wt }];
+      obj.type = "text";
 
-      const wp = { ...p, "w:r": wr };
+      const isHeader = this.checkIsCenter(p);
+      if (isHeader) obj.type = "center";
 
-      return wp;
+      const isPicture = this.checkIsPicture(rows);
+      if (isPicture) obj.type = "picture";
+
+      const isReady = this.checkColor(rows, "green");
+      if (isReady) obj.type = "ready";
+
+      if (isHeader || isPicture || isReady) return { ...obj, handle: false };
+
+      obj.pStyle = p["w:pPr"];
+
+      obj.keywords.push(...this.findKeywords(rows));
+
+      obj.isAddText = this.checkColor(rows, "yellow");
+
+      obj.ref = this.getRef(rows);
+
+      rows.forEach((r) => {
+        if (r.hasOwnProperty("w:t")) {
+          obj.text += this.getRowText(r);
+        }
+      });
+
+      obj.query = "Перефразируй текст, написанный после двоеточия:";
+
+      // if (obj.keywords.length && !obj.isAddText)
+      //   obj.query = `В следующем тексте есть слова - "${obj.keywords.join(
+      //     ", "
+      //   )}". Перефразируй текст, но оставь без изменения слова из предыдущего предложения: `;
+
+      // if (obj.keywords.length && obj.isAddText)
+      //   obj.query = `В следующем тексте есть слова - "${obj.keywords.join(
+      //     ", "
+      //   )}". Перефразируй текст, но оставь без изменения слова из предыдущего предложения, и допиши 5 предложений в том же стиле что и весь текст`;
+
+      // if (!obj.keywords.length && obj.isAddText) obj.query = "Перефразируй текст, и допиши 5 предложений в том же стиле что и весь текст";
+
+      if (obj.isAddText) obj.query += ", и допиши 5 предложений в том же стиле что и весь текст";
+
+      return obj;
     });
 
-    return this.changeParagraphs(json, wp);
+    return result;
   }
 
   static changeParagraphs(json, wp) {

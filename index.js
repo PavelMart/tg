@@ -15,63 +15,48 @@ const getResult = async (chatId, json) => {
 
   const openai = new OpenAIApi(configuration);
 
-  const sendCompletion = async (query) => {
+  const sendCompletion = async (paragraph) => {
     try {
-      if (!query.handle) {
-        return query.text;
+      if (!paragraph.handle || !paragraph.text) {
+        return "";
       }
+
       const completion = await openai.createCompletion({
         model: "text-davinci-003",
-        prompt: `${query.phrase}: ${query.text}`,
+        prompt: `${paragraph.query}: "${paragraph.text}"`,
         temperature: 0.7,
         max_tokens: 2048,
       });
+
       return completion.data.choices[0].text.trim();
+
+      // const promise = new Promise(async (resolve, reject) => {
+      //   const completion = await openai.createCompletion({
+      //     model: "text-davinci-003",
+      //     prompt: `${paragraph.query}: ${paragraph.text}`,
+      //     temperature: 0.7,
+      //     max_tokens: 2048,
+      //   });
+      //   resolve(completion.data.choices[0].text.trim());
+      // });
+
+      // return { ...paragraph, text: await promise };
     } catch (error) {
       throw error;
     }
   };
 
   const handleParagraphs = async (paragraphs) => {
-    const textList = paragraphs.map((p) => {
-      const query = {
-        handle: false,
-        phrase: "",
-        text: "",
-      };
-      if (!p["w:r"]) return query;
-
-      const row = p["w:r"][0];
-
-      const text = Array.isArray(row["w:t"]) ? row["w:t"].join("") : row["w:t"];
-
-      if (p["w:pPr"][0].hasOwnProperty("w:jc") && p["w:pPr"][0]["w:jc"][0]["$"]["w:val"] === "center") return { ...query, text };
-
-      if (row["w:rPr"][0].hasOwnProperty("w:highlight") && row["w:rPr"][0]["w:highlight"][0]["$"]["w:val"] === "green") {
-        return { ...query, text };
-      }
-      return { handle: true, phrase: "Перефразируй", text };
-    });
-
-    const promisesList = textList.map(sendCompletion);
+    const promisesList = paragraphs.map(sendCompletion);
 
     const answersList = await Promise.all(promisesList);
 
-    const result = paragraphs.map((p, i) => {
-      if (answersList[i]) {
-        const wt = answersList[i];
+    const resultsList = paragraphs.map((p, i) => ({ ...p, text: answersList[i] }));
 
-        const wr = [{ ...p["w:r"][0], ["w:t"]: [wt] }];
-
-        return { ...p, "w:r": wr };
-      }
-      return p;
-    });
-
-    return result;
+    return resultsList;
   };
 
-  const { p: paragraphs } = Docx.getDocumentElements(json);
+  const paragraphs = json;
 
   const output = [];
 
@@ -93,7 +78,7 @@ const getResult = async (chatId, json) => {
     } else await bot.sendMessage(chatId, `Обработано ${paragraphs.length}/${paragraphs.length} параграфов`);
   }
 
-  return Docx.changeParagraphs(json, output);
+  return output;
 };
 
 const getReadStreamPromise = (stream, fileWriter) => {
@@ -142,13 +127,13 @@ bot.on("message", async (msg) => {
 
     Docx.extract("file.docx", "extracted");
 
-    const originalJSON = Docx.translateDocumentXMLToJSON();
+    const originalJSON = Docx.translateXMLToJSON();
 
     const preparedJSON = Docx.prepareJSONForRephpasing(originalJSON);
 
     const resultJSON = await getResult(chatId, preparedJSON);
 
-    Docx.translateDocumentJSONToXML(resultJSON);
+    Docx.translateJSONToXML(originalJSON, resultJSON);
 
     Docx.create("extracted", "result.docx");
 
