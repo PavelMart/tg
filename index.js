@@ -172,6 +172,12 @@ bot.on("message", async (msg) => {
         "Вы использовали всю доступную квоту, ChatGPT недоступен с данного аккаунта, смените API_KEY, введя: API_KEY=ваш_ключ_api"
       );
     }
+    if (error.response.status === 400) {
+      return await bot.sendMessage(
+        chatId,
+        "Некорректный запрос, в последний раз такая ошибка была, если в документе был очеь длинный параграф "
+      );
+    }
     return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
   }
 });
