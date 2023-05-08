@@ -143,18 +143,25 @@ bot.on("message", async (msg) => {
 
     await bot.sendDocument(chatId, buffer, {}, { filename: "output.docx", contentType: "text" });
   } catch (error) {
-    console.log(error);
-    if (error.response && error.response.status === 401) {
-      bot.sendMessage(
+    console.log(error.toJSON());
+    if (!error.response) return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
+    if (error.response.status === 500) {
+      return await bot.sendMessage(chatId, "Внутренняя ошибка ChatGPT, мы тут не причем, повтворите позднее");
+    }
+    if (error.response.status === 429) {
+      return await bot.sendMessage(chatId, "В данный мемент обрабатывается другой документ, повторите позднее");
+    }
+    if (error.response.status === 401) {
+      return await bot.sendMessage(
         chatId,
         "Такого API_KEY не существует, создайте новый API_KEY в личном кабинете а затем смените API_KEY, введя: API_KEY=ваш_ключ_api"
       );
-    } else if (error.response && error.response.data.error.type === "insufficient_quota")
-      bot.sendMessage(
+    }
+    if (error.response.data.error.type === "insufficient_quota")
+      return await bot.sendMessage(
         chatId,
         "Вы использовали всю доступную квоту, ChatGPT недоступен с данного аккаунта, смените API_KEY, введя: API_KEY=ваш_ключ_api"
       );
-    else bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
   }
 });
 
