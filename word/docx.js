@@ -104,6 +104,7 @@ class Docx {
   };
 
   static getRowText = (row) => {
+    if (!row.hasOwnProperty("w:t")) return "";
     return typeof row["w:t"][0] === "string" ? row["w:t"][0] : row["w:t"][0].hasOwnProperty("_") ? row["w:t"][0]["_"] : "";
   };
 
@@ -169,7 +170,7 @@ class Docx {
         }
       });
 
-      obj.query = "Перефразируй текст, написанный после двоеточия:";
+      obj.query = "Перефразируй, оставь цифры в квадратных скобках неизменными";
 
       // if (obj.keywords.length && !obj.isAddText)
       //   obj.query = `В следующем тексте есть слова - "${obj.keywords.join(
