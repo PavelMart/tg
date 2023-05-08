@@ -115,7 +115,7 @@ bot.on("message", async (msg) => {
 
     if (!msg.document) return await bot.sendMessage(chatId, "Пожалуйста, отправьте документ Word");
 
-    const ext = msg.document.file_name.split(".")[1];
+    const ext = msg.document.file_name.split(".").at(-1);
 
     if (ext !== "docx") return await bot.sendMessage(chatId, "Некорректный файл. Расширение обрабатываемого файла должно быть .docx");
 
