@@ -8,6 +8,8 @@ const TELEGRAM_BOT_API_KEY = process.env.TELEGRAM_BOT_API_KEY;
 
 let apiKey = null;
 
+let isBusy = false;
+
 const getResult = async (chatId, json) => {
   const configuration = new Configuration({
     apiKey,
@@ -100,6 +102,8 @@ const bot = new TelegramBot(TELEGRAM_BOT_API_KEY, { polling: true });
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   try {
+    if (isBusy) throw new Error("В данный момент обрабатывается другой документ, повторите позднее");
+
     if (msg.text && msg.text.includes("API_KEY=")) {
       apiKey = msg.text.split("=")[1];
       fs.writeFile("api.txt", apiKey, (err) => {
@@ -114,6 +118,8 @@ bot.on("message", async (msg) => {
     const ext = msg.document.file_name.split(".")[1];
 
     if (ext !== "docx") return await bot.sendMessage(chatId, "Некорректный файл. Расширение обрабатываемого файла должно быть .docx");
+
+    isBusy = true;
 
     await bot.sendMessage(chatId, "Подождите, идет обработка файла");
 
@@ -133,6 +139,8 @@ bot.on("message", async (msg) => {
 
     const resultJSON = await getResult(chatId, preparedJSON);
 
+    isBusy = false;
+
     Docx.translateJSONToXML(originalJSON, resultJSON);
 
     Docx.create("extracted", "result.docx");
@@ -143,13 +151,13 @@ bot.on("message", async (msg) => {
 
     await bot.sendDocument(chatId, buffer, {}, { filename: "output.docx", contentType: "text" });
   } catch (error) {
-    console.log(error.toJSON());
+    console.log(error);
     if (!error.response) return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
     if (error.response.status === 500) {
       return await bot.sendMessage(chatId, "Внутренняя ошибка ChatGPT, мы тут не причем, повтворите позднее");
     }
     if (error.response.status === 429) {
-      return await bot.sendMessage(chatId, "В данный мемент обрабатывается другой документ, повторите позднее");
+      return await bot.sendMessage(chatId, "В данный момент обрабатывается другой документ, повторите позднее");
     }
     if (error.response.status === 401) {
       return await bot.sendMessage(

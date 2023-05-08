@@ -38,12 +38,14 @@ class Docx {
     const wp = p.map((p, i) => {
       if (!prepared[i].handle) return p;
 
+      // console.log(p);
+
       let pStyle = p.hasOwnProperty("w:pPr") ? p["w:pPr"][0] : null;
       if (pStyle && !pStyle.hasOwnProperty("w:numPr")) pStyle = { ...pStyle, ["w:ind"]: [{ $: { "w:firstLine": "708" } }] };
 
-      let rStyle = p["w:r"][0]["w:rPr"][0];
+      let rStyle = p["w:r"][0].hasOwnProperty("w:rPr") ? p["w:r"][0]["w:rPr"][0] : pStyle;
       if (prepared[i].isAddText) rStyle = { ...rStyle, ["w:highlight"]: [{ $: { "w:val": "yellow" } }] };
-      if (rStyle.hasOwnProperty("w:b")) delete rStyle["w:b"];
+      if (rStyle && rStyle.hasOwnProperty("w:b")) delete rStyle["w:b"];
 
       let wr = [
         {
