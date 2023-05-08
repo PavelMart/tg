@@ -151,6 +151,7 @@ bot.on("message", async (msg) => {
 
     await bot.sendDocument(chatId, buffer, {}, { filename: "output.docx", contentType: "text" });
   } catch (error) {
+    isBusy = false;
     console.log(error);
     if (!error.response) return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
     if (error.response.status === 500) {
