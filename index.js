@@ -166,11 +166,13 @@ bot.on("message", async (msg) => {
         "Такого API_KEY не существует, создайте новый API_KEY в личном кабинете а затем смените API_KEY, введя: API_KEY=ваш_ключ_api"
       );
     }
-    if (error.response.data.error.type === "insufficient_quota")
+    if (error.response.data.error.type === "insufficient_quota") {
       return await bot.sendMessage(
         chatId,
         "Вы использовали всю доступную квоту, ChatGPT недоступен с данного аккаунта, смените API_KEY, введя: API_KEY=ваш_ключ_api"
       );
+    }
+    return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
   }
 });
 
