@@ -144,7 +144,12 @@ bot.on("message", async (msg) => {
     await bot.sendDocument(chatId, buffer, {}, { filename: "output.docx", contentType: "text" });
   } catch (error) {
     console.log(error);
-    if (error.response && error.response.data.error.type === "insufficient_quota")
+    if (error.response && error.response.status === 401) {
+      bot.sendMessage(
+        chatId,
+        "Такого API_KEY не существует, создайте новый API_KEY в личном кабинете а затем смените API_KEY, введя: API_KEY=ваш_ключ_api"
+      );
+    } else if (error.response && error.response.data.error.type === "insufficient_quota")
       bot.sendMessage(
         chatId,
         "Вы использовали всю доступную квоту, ChatGPT недоступен с данного аккаунта, смените API_KEY, введя: API_KEY=ваш_ключ_api"
