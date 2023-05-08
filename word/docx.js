@@ -170,7 +170,7 @@ class Docx {
         }
       });
 
-      obj.query = "Перефразируй, оставь цифры в квадратных скобках неизменными";
+      obj.query = "Перефразируй текст";
 
       // if (obj.keywords.length && !obj.isAddText)
       //   obj.query = `В следующем тексте есть слова - "${obj.keywords.join(
