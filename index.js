@@ -31,18 +31,6 @@ const getResult = async (chatId, json) => {
       });
 
       return completion.data.choices[0].text.trim();
-
-      // const promise = new Promise(async (resolve, reject) => {
-      //   const completion = await openai.createCompletion({
-      //     model: "text-davinci-003",
-      //     prompt: `${paragraph.query}: ${paragraph.text}`,
-      //     temperature: 0.7,
-      //     max_tokens: 2048,
-      //   });
-      //   resolve(completion.data.choices[0].text.trim());
-      // });
-
-      // return { ...paragraph, text: await promise };
     } catch (error) {
       throw error;
     }
