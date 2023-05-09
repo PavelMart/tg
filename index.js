@@ -39,6 +39,8 @@ const getResult = async (chatId, json) => {
   const handleParagraphs = async (paragraphs) => {
     const promisesList = paragraphs.map(sendCompletion);
 
+    console.log(promisesList.length);
+
     const answersList = await Promise.all(promisesList);
 
     const resultsList = paragraphs.map((p, i) => ({ ...p, text: answersList[i] }));
@@ -141,19 +143,11 @@ bot.on("message", async (msg) => {
   } catch (error) {
     isBusy = false;
     console.log(error);
+
     if (!error.response) return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
-    if (error.response.status === 500) {
-      return await bot.sendMessage(chatId, "Внутренняя ошибка ChatGPT, мы тут не причем, повтворите позднее");
-    }
-    if (error.response.status === 429) {
-      return await bot.sendMessage(chatId, "В данный момент обрабатывается другой документ, повторите позднее");
-    }
-    if (error.response.status === 401) {
-      return await bot.sendMessage(
-        chatId,
-        "Такого API_KEY не существует, создайте новый API_KEY в личном кабинете а затем смените API_KEY, введя: API_KEY=ваш_ключ_api"
-      );
-    }
+
+    console.log(error.response.data.error);
+
     if (error.response.data.error.type === "insufficient_quota") {
       return await bot.sendMessage(
         chatId,
@@ -166,6 +160,19 @@ bot.on("message", async (msg) => {
         "Некорректный запрос, в последний раз такая ошибка была, если в документе был очеь длинный параграф "
       );
     }
+    if (error.response.status === 401) {
+      return await bot.sendMessage(
+        chatId,
+        "Такого API_KEY не существует, создайте новый API_KEY в личном кабинете а затем смените API_KEY, введя: API_KEY=ваш_ключ_api"
+      );
+    }
+    if (error.response.status === 429) {
+      return await bot.sendMessage(chatId, "В данный момент обрабатывается другой документ, повторите позднее");
+    }
+    if (error.response.status === 500) {
+      return await bot.sendMessage(chatId, "Внутренняя ошибка ChatGPT, мы тут не причем, повтворите позднее");
+    }
+
     return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
   }
 });
