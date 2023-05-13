@@ -179,7 +179,18 @@ class Docx {
           ", "
         )}", если не знаешь как, верни исходный вариант`;
 
-      if (obj.isAddText) obj.query += ", и допиши 5 предложений в том же стиле что и весь текст";
+      if (obj.text.length > 2048) {
+        const arr = obj.text.split(".");
+
+        let i = 0;
+
+        while (obj.text.length < 2048) {
+          obj.text += arr[i];
+          i++;
+        }
+
+        obj.query += `, и допиши как минимум ${obj.text.length - 2048} символов в том же стиле что и весь текст`;
+      } else if (obj.isAddText) obj.query += ", и допиши 5 предложений в том же стиле что и весь текст";
 
       return obj;
     });

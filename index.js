@@ -27,7 +27,6 @@ const getResult = async (chatId, json) => {
         model: "text-davinci-003",
         prompt: `${paragraph.query}: "${paragraph.text}"`,
         temperature: 0.7,
-        max_tokens: 2048,
       });
 
       return completion.data.choices[0].text.trim();
@@ -38,8 +37,6 @@ const getResult = async (chatId, json) => {
 
   const handleParagraphs = async (paragraphs) => {
     const promisesList = paragraphs.map(sendCompletion);
-
-    console.log(promisesList.length);
 
     const answersList = await Promise.all(promisesList);
 
@@ -91,6 +88,7 @@ const bot = new TelegramBot(TELEGRAM_BOT_API_KEY, { polling: true });
 
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
+
   try {
     if (isBusy) throw new Error("В данный момент обрабатывается другой документ, повторите позднее");
 
@@ -102,6 +100,8 @@ bot.on("message", async (msg) => {
     } else apiKey = fs.readFileSync("api.txt").toString();
 
     if (!apiKey) return await bot.sendMessage(chatId, "Пришлите API_KEY в формате: API_KEY=ваш_ключ_api");
+
+    if (msg.text === "/get_api_key") return await bot.sendMessage(chatId, apiKey);
 
     if (!msg.document) return await bot.sendMessage(chatId, "Пожалуйста, отправьте документ Word");
 
@@ -145,6 +145,8 @@ bot.on("message", async (msg) => {
     console.log(error);
 
     if (!error.response) return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
+
+    if (!error.response.data) return await bot.sendMessage(chatId, "Произошла внутренняя ошибка, повторите позднее" + error);
 
     console.log(error.response.data.error);
 
