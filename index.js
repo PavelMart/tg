@@ -27,6 +27,7 @@ const getResult = async (chatId, json) => {
         model: "text-davinci-003",
         prompt: `${paragraph.query}: "${paragraph.text}"`,
         temperature: 0.7,
+        max_tokens: 2048,
       });
 
       return completion.data.choices[0].text.trim();
