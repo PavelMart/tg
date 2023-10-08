@@ -25,23 +25,23 @@ const getResult = async (chatId, json) => {
                 return "";
             }
 
-            // const completion = await openai.createCompletion({
-            //     model: "gpt-3.5-turbo",
-            //     prompt: `${paragraph.query}: "${paragraph.text}"`,
-            //     temperature: 0.2,
-            //     max_tokens: 2048,
-            // });
-
-            // return completion.data.choices[0].text.trim();
-
-            const stream1 = await openai.createChatCompletion({
+            const completion = await openai.createCompletion({
                 model: "gpt-3.5-turbo",
-                messages: [
-                    { role: "system", content: `${paragraph.query}` },
-                    { role: "user", content: `${paragraph.text}` },
-                ],
-                stream: false,
+                prompt: `${paragraph.query}: "${paragraph.text}"`,
+                temperature: 0.2,
+                max_tokens: 2048,
             });
+
+            return completion.data.choices[0].text.trim();
+
+            // const stream1 = await openai.createChatCompletion({
+            //     model: "gpt-3.5-turbo",
+            //     messages: [
+            //         { role: "system", content: `${paragraph.query}` },
+            //         { role: "user", content: `${paragraph.text}` },
+            //     ],
+            //     stream: false,
+            // });
 
             // const stream = await openai.createChatCompletion({
             //     model: "gpt-3.5-turbo",
@@ -52,7 +52,7 @@ const getResult = async (chatId, json) => {
             //     stream: false,
             // });
 
-            return stream1.data.choices[0].message.content;
+            // return stream1.data.choices[0].message.content;
         } catch (error) {
             throw error;
         }
