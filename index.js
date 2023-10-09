@@ -26,7 +26,7 @@ const getResult = async (chatId, json) => {
             }
 
             const completion = await openai.createCompletion({
-                model: "gpt-3.5-turbo",
+                model: "text-davinci-003",
                 prompt: `${paragraph.query}: "${paragraph.text}"`,
                 temperature: 0.2,
                 max_tokens: 2048,
