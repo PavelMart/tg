@@ -25,23 +25,23 @@ const getResult = async (chatId, json) => {
                 return "";
             }
 
-            const completion = await openai.createCompletion({
-                model: "text-davinci-003",
-                prompt: `${paragraph.query}: "${paragraph.text}"`,
-                temperature: 0.2,
-                max_tokens: 2048,
-            });
-
-            return completion.data.choices[0].text.trim();
-
-            // const stream1 = await openai.createChatCompletion({
-            //     model: "gpt-3.5-turbo",
-            //     messages: [
-            //         { role: "system", content: `${paragraph.query_1}` },
-            //         { role: "user", content: `${paragraph.text}` },
-            //     ],
-            //     stream: false,
+            // const completion = await openai.createCompletion({
+            //     model: "text-davinci-003",
+            //     prompt: `${paragraph.query}: "${paragraph.text}"`,
+            //     temperature: 0.2,
+            //     max_tokens: 2048,
             // });
+
+            // return completion.data.choices[0].text.trim();
+
+            const stream1 = await openai.createChatCompletion({
+                model: "gpt-4",
+                messages: [
+                    { role: "system", content: `${paragraph.query}` },
+                    { role: "user", content: `${paragraph.text}` },
+                ],
+                stream: false,
+            });
 
             // const stream = await openai.createChatCompletion({
             //     model: "gpt-3.5-turbo",
@@ -52,7 +52,7 @@ const getResult = async (chatId, json) => {
             //     stream: false,
             // });
 
-            // return stream.data.choices[0].message.content;
+            return stream1.data.choices[0].message.content;
         } catch (error) {
             throw error;
         }
@@ -72,7 +72,7 @@ const getResult = async (chatId, json) => {
 
     const output = [];
 
-    const count = 60;
+    const count = 10;
 
     const pages = Math.floor(paragraphs.length / count);
 
